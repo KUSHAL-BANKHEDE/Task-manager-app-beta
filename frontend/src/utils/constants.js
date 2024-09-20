@@ -1,1 +1,1 @@
-export const Domain = "https://task-management.kushal-bankhede.live"
+export const Domain = "https://task-manager-app-beta-self.vercel.app"
