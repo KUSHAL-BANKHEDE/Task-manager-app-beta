@@ -12,12 +12,13 @@ dotenv.config();
 const app = express();
 
 app.use(cors({
-    origin: 'https://task-management.kushal-bankhede.live',
+    origin: '*',
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     credentials: true
   }));
 
 app.use(express.json());
+app.options('*', cors());
 app.use(cors());
 app.use(bodyParser.json());
 
