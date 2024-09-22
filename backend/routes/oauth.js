@@ -42,7 +42,7 @@ router.get('/', async function(req, res, next) {
     }
 
 
-    res.redirect(303, 'http://task-management.kushal-bankhede.live/dashboard');
+    res.redirect(303, 'https://task-management.kushal-bankhede.live/dashboard');
   
 
 
