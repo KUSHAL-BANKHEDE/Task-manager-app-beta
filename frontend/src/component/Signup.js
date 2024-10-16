@@ -1,10 +1,7 @@
 import { useState } from "react";
-import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { showToast } from "../utils/toastConfig";
 import { Domain } from "../utils/constants";
-
-
 
 export default function Signup() {
   const [firstName, setFirstName] = useState("");
@@ -19,38 +16,34 @@ export default function Signup() {
       alert("Passwords do not match");
       return;
     }
+    
     try {
-      
-      const res = await axios.post(
-        `${Domain}/api/auth/register`,
-        {
-          email: email,
-          firstName: firstName,
-          lastName: lastName,
-          password: password,
+      const response = await fetch(`${Domain}/api/auth/register`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
         },
-        
-      );
+        body: JSON.stringify({
+          email,
+          firstName,
+          lastName,
+          password,
+        }),
+      });
 
-      console.log(res);
-      const { user, token } = res.data;
+      const res = await response.json();
 
-      sessionStorage.setItem("user", JSON.stringify(user));
-      sessionStorage.setItem("token", token);
-        
-      
-
-      navigate("/");
-        if (res.stetus===200) {
-          showToast("Signup successful!")
-        }
-        else{
-          showToast(res.massage,"error")
-        }
+      if (response.status === 200) {
+        const { user, token } = res;
+        sessionStorage.setItem("user", JSON.stringify(user));
+        sessionStorage.setItem("token", token);
+        showToast("Signup successful!");
+        navigate("/");
+      } else {
+        showToast(res.message || "Error during signup", "error");
+      }
     } catch (err) {
-         
-      showToast("Error signing up","error");
-
+      showToast("Error signing up", "error");
       console.error("Error signing up", err);
     }
   };

@@ -1,5 +1,4 @@
 import { useState } from "react";
-import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { showToast } from "../utils/toastConfig";
 import { Domain } from "../utils/constants";
@@ -12,42 +11,48 @@ export default function Login() {
 
   const handleLogin = async () => {
     try {
-      const res = await axios.post(`${Domain}/api/auth/login`, {
-        email,
-        password,
+      const response = await fetch(`${Domain}/api/auth/login`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, password }),
       });
 
-      console.log(res);
-      const { user, token } = res.data;
+      const res = await response.json();
 
-      sessionStorage.setItem("user", JSON.stringify(user));
-      sessionStorage.setItem("token", token);
-      if (res.status === 200) {
-        showToast("Login successful!")
+      if (response.status === 200) {
+        const { user, token } = res;
+        sessionStorage.setItem("user", JSON.stringify(user));
+        sessionStorage.setItem("token", token);
+        showToast("Login successful!");
+        navigate("/dashboard");
+      } else {
+        showToast(res.message || "Error during login", "error");
+        setError("Invalid credentials");
       }
-      else{
-        showToast(res.massage,"error")
-      }
-              navigate("/dashboard");
-      //   if (res.status === 200) {
-    //   }
     } catch (err) {
-      showToast("Error login","error");
+      showToast("Error during login", "error");
       setError("Invalid credentials");
     }
   };
 
-
-  function nave(url){
+  function nave(url) {
     window.location.href = url;
   }
-  async function auth(){
-    const response =await fetch(`${Domain}/request`,{method:'post'});
-  
-    const data = await response.json();
-    console.log(data);
-    nave(data.url);
-  
+
+  async function auth() {
+    try {
+      const response = await fetch(`${Domain}/request`, {
+        method: "POST",
+      });
+
+      const data = await response.json();
+      console.log(data);
+      nave(data.url);
+    } catch (err) {
+      console.error("Error during Google auth", err);
+    }
   }
 
   return (
@@ -81,8 +86,9 @@ export default function Login() {
             Signup
           </a>
         </p>
-        <button className="bg-red-500 w-full py-2 text-white mt-4"
-              onClick={()=> auth()}
+        <button
+          className="bg-red-500 w-full py-2 text-white mt-4"
+          onClick={() => auth()}
         >
           Login with Google
         </button>

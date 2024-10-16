@@ -1,21 +1,19 @@
 import { useState, useEffect } from "react";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
-import Header from "./Header"
-import axios from "axios";
+import Header from "./Header";
 import { Domain } from "../utils/constants";
 
-import Column from "./Column"
-
+import Column from "./Column";
 
 export default function Dashboard() {
   const [tasks, setTasks] = useState([]);
-  const [newTask ,setNewTask] = useState("");
-  const [taskDescription , setTaskDescription] = useState("");
-  const [taskStatus , setTaskStatus] = useState("ToDo");
+  const [newTask, setNewTask] = useState("");
+  const [taskDescription, setTaskDescription] = useState("");
+  const [taskStatus, setTaskStatus] = useState("ToDo");
   const [showForm, setShowForm] = useState(false);
   const [assignee, setAssignee] = useState("");
-  const [users, setUsers] = useState([]); 
+  const [users, setUsers] = useState([]);
 
   const handleAddTaskClick = () => {
     setShowForm(true);
@@ -27,22 +25,27 @@ export default function Dashboard() {
 
   const handleFormSubmit = async (e) => {
     e.preventDefault();
-    // Call your API to add the task
+    const token = sessionStorage.getItem("token");
+
     try {
-      const token = sessionStorage.getItem("token");
-      const response = await axios.post(`${Domain}/api/tasks`, {
-          title: newTask,            // Task name (title)
-          description: taskDescription,  // Task description
-          status: taskStatus,
-          assignee: assignee
-      }, {
+      const response = await fetch(`${Domain}/api/tasks`, {
+        method: "POST",
         headers: {
-          Authorization: `Bearer ${token}`
-        }
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          title: newTask,
+          description: taskDescription,
+          status: taskStatus,
+          assignee: assignee,
+        }),
       });
-      console.log("Task added", response.data);
+
+      const data = await response.json();
+      console.log("Task added", data);
       setShowForm(false); // Hide the form on success
-      setTasks((prevTasks) => [...prevTasks, response.data]);
+      setTasks((prevTasks) => [...prevTasks, data]);
     } catch (error) {
       console.error("Error adding task", error);
     }
@@ -50,17 +53,38 @@ export default function Dashboard() {
 
   useEffect(() => {
     const fetchUsers = async () => {
+      const token = sessionStorage.getItem("token");
+
       try {
-        const token = sessionStorage.getItem("token");
-        const response = await axios.get(`${Domain}/api/auth/allUsers`, {
+        const response = await fetch(`${Domain}/api/auth/allUsers`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
         });
-        setUsers(response.data); // Store the fetched users
-        console.log(response);
+
+        const data = await response.json();
+        setUsers(data);
+        console.log(data);
       } catch (error) {
         console.error("Error fetching users", error);
+      }
+    };
+
+    const fetchTasks = async () => {
+      const token = sessionStorage.getItem("token");
+
+      try {
+        const response = await fetch(`${Domain}/api/tasks`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        const data = await response.json();
+        setTasks(data);
+        console.log(data);
+      } catch (error) {
+        console.error("Error fetching tasks", error);
       }
     };
 
@@ -68,61 +92,44 @@ export default function Dashboard() {
     fetchTasks();
   }, []);
 
-  const fetchTasks = async () => {
-    try {
-      // Retrieve the JWT token from sessionStorage
-      
-      const token = sessionStorage.getItem("token");
-      console.log(sessionStorage.getItem("token"));
-      
-      // Make the request with Authorization header
-      const res = await axios.get(`${Domain}/api/tasks`, {
-        headers: {
-          Authorization: `Bearer ${token}`,  // Add token to Authorization header
-          
-        },
-
-      
-      });
-  
-      // Set the tasks from response
-      setTasks(res.data);
-      console.log(res);
-    } catch (err) {
-      console.error("Error fetching tasks", err);
-    }
-  };
-  
   const deleteTask = async (taskId) => {
+    const token = sessionStorage.getItem("token");
+
     try {
-      const token = sessionStorage.getItem("token");
-      await axios.delete(`${Domain}/api/tasks/${taskId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      // Filter out the deleted task from the UI
-      setTasks(tasks.filter((task) => task._id !== taskId));
-    } catch (error) {
-      console.error("Error deleting task", error);
-    }
-  };
-
-
-
-  const updateTask = async (taskId, updatedTitle, updatedDescription) => {
-    try {
-      const token = sessionStorage.getItem("token");
-      const updatedTask = { title: updatedTitle, description: updatedDescription };
-
-      await axios.put(`${Domain}/api/tasks/${taskId}`, updatedTask, {
+      await fetch(`${Domain}/api/tasks/${taskId}`, {
+        method: "DELETE",
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
 
-      // Update the task in the UI
+      setTasks((prevTasks) => prevTasks.filter((task) => task._id !== taskId));
+    } catch (error) {
+      console.error("Error deleting task", error);
+    }
+  };
+
+  const updateTask = async (taskId, updatedTitle, updatedDescription) => {
+    const token = sessionStorage.getItem("token");
+
+    try {
+      await fetch(`${Domain}/api/tasks/${taskId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          title: updatedTitle,
+          description: updatedDescription,
+        }),
+      });
+
       setTasks((prevTasks) =>
         prevTasks.map((task) =>
-          task._id === taskId ? { ...task, title: updatedTitle, description: updatedDescription } : task
+          task._id === taskId
+            ? { ...task, title: updatedTitle, description: updatedDescription }
+            : task
         )
       );
     } catch (error) {
@@ -131,16 +138,20 @@ export default function Dashboard() {
   };
 
   const moveTask = async (task, newStatus) => {
+    const token = sessionStorage.getItem("token");
+
     try {
-      const token = sessionStorage.getItem("token");
-      const updatedTask = { ...task, status: newStatus };
-      await axios.put(`${Domain}/api/tasks/${task._id}`, updatedTask, {
+      await fetch(`${Domain}/api/tasks/${task._id}`, {
+        method: "PUT",
         headers: {
+          "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
+        body: JSON.stringify({ ...task, status: newStatus }),
       });
+
       setTasks((prevTasks) =>
-        prevTasks.map((t) => (t._id === task._id ? updatedTask : t))
+        prevTasks.map((t) => (t._id === task._id ? { ...t, status: newStatus } : t))
       );
     } catch (error) {
       console.error("Error updating task status", error);
@@ -148,42 +159,37 @@ export default function Dashboard() {
   };
 
   return (
-    <DndProvider  backend={HTML5Backend}  >
-      <Header/>
-    <div className="p-6">
-      <button onClick={handleAddTaskClick} className="bg-blue-500 text-white px-4 py-2 rounded">
-        Add Task
-      </button>
+    <DndProvider backend={HTML5Backend}>
+      <Header />
+      <div className="p-6">
+        <button onClick={handleAddTaskClick} className="bg-blue-500 text-white px-4 py-2 rounded">
+          Add Task
+        </button>
 
-
-
-        {/* Conditional rendering of the form */}
         {showForm && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center">
-          <div className="bg-white p-6 rounded shadow-lg">
-            <h2 className="text-2xl mb-4">Add a New Task</h2>
+            <div className="bg-white p-6 rounded shadow-lg">
+              <h2 className="text-2xl mb-4">Add a New Task</h2>
 
-            <form onSubmit={handleFormSubmit}>
-              <input
-                type="text"
-                className="border p-2 w-full mb-4"
-                placeholder="Task Name"
-                value={newTask}  // Bind to newTaskTitle state
-                onChange={(e) => setNewTask(e.target.value)}
-                required
+              <form onSubmit={handleFormSubmit}>
+                <input
+                  type="text"
+                  className="border p-2 w-full mb-4"
+                  placeholder="Task Name"
+                  value={newTask}
+                  onChange={(e) => setNewTask(e.target.value)}
+                  required
                 />
-
-               <textarea
-                className="border p-2 w-full mb-4"
-                placeholder="Task Description"
-                value={taskDescription}
-                onChange={(e) => setTaskDescription(e.target.value)}
+                <textarea
+                  className="border p-2 w-full mb-4"
+                  placeholder="Task Description"
+                  value={taskDescription}
+                  onChange={(e) => setTaskDescription(e.target.value)}
                 />
-
-               <select
+                <select
                   value={assignee}
                   onChange={(e) => setAssignee(e.target.value)}
-                  className="border p-2 w-full mb-4 "
+                  className="border p-2 w-full mb-4"
                 >
                   <option value="">Select Assignee</option>
                   {users.map((user) => (
@@ -191,75 +197,90 @@ export default function Dashboard() {
                       {user.firstName}
                     </option>
                   ))}
-                </select>   
-                
-              {/* Option to choose task status */}
-              
-              <select
-                className="border p-2 w-full mb-4"
-                value={taskStatus}  // Bind to newTaskStatus state
-                onChange={(e) => setTaskStatus(e.target.value)}
+                </select>
+                <select
+                  className="border p-2 w-full mb-4"
+                  value={taskStatus}
+                  onChange={(e) => setTaskStatus(e.target.value)}
                 >
-                <option value="ToDo">To Do</option>
-                <option value="InProgress">In Progress</option>
-                <option value="Done">Done</option>
-              </select>
+                  <option value="ToDo">To Do</option>
+                  <option value="InProgress">In Progress</option>
+                  <option value="Done">Done</option>
+                </select>
 
-              <div className="flex justify-end">
-                <button type="button" onClick={handleCloseForm} className="mr-4 px-4 py-2 text-gray-600">
-                  Cancel
-                </button>
-                <button type="submit" className="bg-blue-500 text-white px-4 py-2 rounded">
-                  Add Task
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-
-
-{/* Search & Filter Section */}
-     <div className="mb-4">
-        <input className="border p-2" type="text" placeholder="Search..." />
-        <select className="ml-2 border p-2">
-          <option>Recent</option>
-        </select>
-      </div>
-
-
-      <div className="flex gap-4 justify-between mt-6 rounded-lg shadow-md m-4 ">
-          <Column className = "m-4 p-3" status="ToDo" tasks={tasks} moveTask={moveTask} deleteTask={deleteTask} updateTask={updateTask} assignee = {assignee} />
-          <Column status="InProgress" tasks={tasks} moveTask={moveTask} deleteTask={deleteTask} updateTask={updateTask}  assignee = {assignee} />
-          <Column status="Done" tasks={tasks} moveTask={moveTask} deleteTask={deleteTask} updateTask={updateTask} assignee = {assignee} />
-      </div>
-
-
-       {/* Task List */}
-       <div className="bg-blue-200 p-4 rounded-lg shadow-md flex flex-wrap ">
-        {Array.isArray(tasks) && tasks.length > 0 ? (
-          tasks.map((task) => (
-            <div key={task._id} className="mb-4 bg-white p-4 shadow-md rounded-md mx-3">
-              <h3 className="text-xl font-bold">{task.title}</h3>
-              <p>{task.description}</p>
-              <p>Status: {task.status}</p>
-              <p>Created at: {new Date(task.createdAt).toLocaleString()}</p>
-              <div className="flex mt-4">
-                <button 
-                  className="bg-red-500 text-white py-1 px-2"
-                  onClick={() => deleteTask(task._id)}
-                >Delete</button>
-                <button className="bg-blue-500 text-white py-1 px-2 ml-2">Edit</button>
-                <button className="bg-gray-500 text-white py-1 px-2 ml-2">View Details</button>
-              </div>
+                <div className="flex justify-end">
+                  <button type="button" onClick={handleCloseForm} className="mr-4 px-4 py-2 text-gray-600">
+                    Cancel
+                  </button>
+                  <button type="submit" className="bg-blue-500 text-white px-4 py-2 rounded">
+                    Add Task
+                  </button>
+                </div>
+              </form>
             </div>
-          ))
+          </div>
+        )}
+
+        <div className="mb-4">
+          <input className="border p-2" type="text" placeholder="Search..." />
+          <select className="ml-2 border p-2">
+            <option>Recent</option>
+          </select>
+        </div>
+
+        <div className="flex gap-4 justify-between mt-6 rounded-lg shadow-md m-4">
+          <Column
+            className="m-4 p-3"
+            status="ToDo"
+            tasks={tasks}
+            moveTask={moveTask}
+            deleteTask={deleteTask}
+            updateTask={updateTask}
+            assignee={assignee}
+          />
+          <Column
+            status="InProgress"
+            tasks={tasks}
+            moveTask={moveTask}
+            deleteTask={deleteTask}
+            updateTask={updateTask}
+            assignee={assignee}
+          />
+          <Column
+            status="Done"
+            tasks={tasks}
+            moveTask={moveTask}
+            deleteTask={deleteTask}
+            updateTask={updateTask}
+            assignee={assignee}
+          />
+        </div>
+
+        <div className="bg-blue-200 p-4 rounded-lg shadow-md flex flex-wrap">
+          {Array.isArray(tasks) && tasks.length > 0 ? (
+            tasks.map((task) => (
+              <div key={task._id} className="mb-4 bg-white p-4 shadow-md rounded-md mx-3">
+                <h3 className="text-xl font-bold">{task.title}</h3>
+                <p>{task.description}</p>
+                <p>Status: {task.status}</p>
+                <p>Created at: {new Date(task.createdAt).toLocaleString()}</p>
+                <div className="flex mt-4">
+                  <button
+                    className="bg-red-500 text-white py-1 px-2"
+                    onClick={() => deleteTask(task._id)}
+                  >
+                    Delete
+                  </button>
+                  <button className="bg-blue-500 text-white py-1 px-2 ml-2">Edit</button>
+                  <button className="bg-gray-500 text-white py-1 px-2 ml-2">View Details</button>
+                </div>
+              </div>
+            ))
           ) : (
-            <p>No tasks available</p>
-            )}
-    </div>
-    </div>
-</DndProvider>
+            <div className="text-center w-full">No tasks found.</div>
+          )}
+        </div>
+      </div>
+    </DndProvider>
   );
 }
