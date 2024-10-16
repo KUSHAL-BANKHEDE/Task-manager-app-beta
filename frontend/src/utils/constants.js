@@ -1,1 +1,1 @@
-export const Domain = "https://task-manager-app-beta-self.vercel.app"
+export const Domain = "http://localhost:7777"

@@ -5,7 +5,8 @@ exports.createTask = async (req, res) => {
     try {
         const task = new Task({
             ...req.body,
-            createdBy: req.user  // Attach the user ID to the task
+            createdBy: req.user,  // Attach the user ID to the task
+            assignee: req.body.assignee
         });
         await task.save();
         res.status(201).json(task);
@@ -17,7 +18,9 @@ exports.createTask = async (req, res) => {
 // Get all tasks for the authenticated user
 exports.getTasks = async (req, res) => {
     try {
-        const tasks = await Task.find({ createdBy: req.user });
+        const tasks = await Task.find({ createdBy: req.user })
+        .populate('assignee', 'firstName');
+        
         res.status(200).json(tasks);
     } catch (error) {
         res.status(400).json({ message: 'Error fetching tasks', error });

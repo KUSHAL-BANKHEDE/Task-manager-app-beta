@@ -1,109 +1,11 @@
 import { useState, useEffect } from "react";
-import { useDrag, useDrop, DndProvider } from "react-dnd";
+import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import Header from "./Header"
 import axios from "axios";
 import { Domain } from "../utils/constants";
 
-function TaskCard({task , moveTask , deleteTask, updateTask}){
-  
-  const [isEditing, setIsEditing] = useState(false);
-  const [editedTitle, setEditedTitle] = useState(task.title);
-  const [editedDescription, setEditedDescription] = useState(task.description);
-
-  const [{ isDragging }, drag] = useDrag(() => ({
-    type: "TASK",
-    item: { task },
-    collect: (monitor) => ({
-      isDragging: monitor.isDragging(),
-    }),
-  }));
-
-  const opacity = isDragging ? 0.5 : 1;
-
-  const handleEditClick = () => {
-    setIsEditing(true);
-  };
-
-  const handleSaveClick = () => {
-    updateTask(task._id, editedTitle, editedDescription);
-    setIsEditing(false); // Exit edit mode after saving
-  };
-
-  const handleCancelClick = () => {
-    setIsEditing(false); // Cancel edit mode
-    setEditedTitle(task.title); // Reset title and description
-    setEditedDescription(task.description);
-  };
-
-  return (
-    <div
-      ref={drag}
-      className="bg-blue-200 p-4 shadow-md rounded-md mb-2"
-      style={{ opacity }}
-    >
-      {isEditing ? (
-        // Render the edit form if in editing mode
-        <>
-          <input
-            type="text"
-            className="border p-2 w-full mb-2"
-            value={editedTitle}
-            onChange={(e) => setEditedTitle(e.target.value)}
-          />
-          <textarea
-            className="border p-2 w-full mb-2"
-            value={editedDescription}
-            onChange={(e) => setEditedDescription(e.target.value)}
-          />
-          <div className="flex mt-4">
-            <button className="bg-green-500 text-white py-1 px-2" onClick={handleSaveClick}>
-              Save
-            </button>
-            <button className="bg-gray-500 text-white py-1 px-2 ml-2" onClick={handleCancelClick}>
-              Cancel
-            </button>
-          </div>
-        </>
-      ) : (
-        // Render task details if not in editing mode
-        <>
-          <h3 className="text-xl font-bold">{task.title}</h3>
-          <p>{task.description}</p>
-          <p>Status: {task.status}</p>
-          <div className="flex mt-4">
-            <button className="bg-red-500 text-white py-1 px-2" onClick={() => deleteTask(task._id)}>
-              Delete
-            </button>
-            <button className="bg-blue-500 text-white py-1 px-2 ml-2" onClick={handleEditClick}>
-              Edit
-            </button>
-            <button className="bg-gray-500 text-white py-1 px-2 ml-2">View Details</button>
-          </div>
-        </>
-      )}
-    </div>
-  );
-
-}
-
-function Column({ status, tasks, moveTask, deleteTask, updateTask  }) {
-  const [, drop] = useDrop({
-    accept: "TASK",
-    drop: (item) => moveTask(item.task, status),
-  });
-
-  return (
-    <div ref={drop} className="w-1/3 p-2 bg-gray-200 rounded-md shadow-lg">
-      <h2 className="text-xl bg-blue-400 text-white px-3 font-bold mb-4">{status}</h2>
-      {tasks
-        .filter((task) => task.status === status)
-        .map((task) => (
-          <TaskCard key={task._id} task={task} moveTask={moveTask} deleteTask={deleteTask} updateTask={updateTask}/>
-        ))}
-    </div>
-  );
-}
+import Column from "./Column"
 
 
 export default function Dashboard() {
@@ -112,6 +14,8 @@ export default function Dashboard() {
   const [taskDescription , setTaskDescription] = useState("");
   const [taskStatus , setTaskStatus] = useState("ToDo");
   const [showForm, setShowForm] = useState(false);
+  const [assignee, setAssignee] = useState("");
+  const [users, setUsers] = useState([]); 
 
   const handleAddTaskClick = () => {
     setShowForm(true);
@@ -129,7 +33,8 @@ export default function Dashboard() {
       const response = await axios.post(`${Domain}/api/tasks`, {
           title: newTask,            // Task name (title)
           description: taskDescription,  // Task description
-          status: taskStatus   
+          status: taskStatus,
+          assignee: assignee
       }, {
         headers: {
           Authorization: `Bearer ${token}`
@@ -144,6 +49,22 @@ export default function Dashboard() {
   };
 
   useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        const token = sessionStorage.getItem("token");
+        const response = await axios.get(`${Domain}/api/auth/allUsers`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        setUsers(response.data); // Store the fetched users
+        console.log(response);
+      } catch (error) {
+        console.error("Error fetching users", error);
+      }
+    };
+
+    fetchUsers();
     fetchTasks();
   }, []);
 
@@ -160,6 +81,8 @@ export default function Dashboard() {
           Authorization: `Bearer ${token}`,  // Add token to Authorization header
           
         },
+
+      
       });
   
       // Set the tasks from response
@@ -257,7 +180,21 @@ export default function Dashboard() {
                 onChange={(e) => setTaskDescription(e.target.value)}
                 />
 
+               <select
+                  value={assignee}
+                  onChange={(e) => setAssignee(e.target.value)}
+                  className="border p-2 w-full mb-4 "
+                >
+                  <option value="">Select Assignee</option>
+                  {users.map((user) => (
+                    <option key={user._id} value={user._id}>
+                      {user.firstName}
+                    </option>
+                  ))}
+                </select>   
+                
               {/* Option to choose task status */}
+              
               <select
                 className="border p-2 w-full mb-4"
                 value={taskStatus}  // Bind to newTaskStatus state
@@ -293,9 +230,9 @@ export default function Dashboard() {
 
 
       <div className="flex gap-4 justify-between mt-6 rounded-lg shadow-md m-4 ">
-          <Column className = "m-4 p-3" status="ToDo" tasks={tasks} moveTask={moveTask} deleteTask={deleteTask} updateTask={updateTask} />
-          <Column status="InProgress" tasks={tasks} moveTask={moveTask} deleteTask={deleteTask} updateTask={updateTask} />
-          <Column status="Done" tasks={tasks} moveTask={moveTask} deleteTask={deleteTask} updateTask={updateTask}/>
+          <Column className = "m-4 p-3" status="ToDo" tasks={tasks} moveTask={moveTask} deleteTask={deleteTask} updateTask={updateTask} assignee = {assignee} />
+          <Column status="InProgress" tasks={tasks} moveTask={moveTask} deleteTask={deleteTask} updateTask={updateTask}  assignee = {assignee} />
+          <Column status="Done" tasks={tasks} moveTask={moveTask} deleteTask={deleteTask} updateTask={updateTask} assignee = {assignee} />
       </div>
 
 

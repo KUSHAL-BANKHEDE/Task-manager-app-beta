@@ -4,7 +4,8 @@ const TaskSchema = new mongoose.Schema({
     title: { type: String, required: true },
     description: String,
     status: { type: String, enum: ['ToDo', 'InProgress', 'Done'], required: true },
-    createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }
+    createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    assignee: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
     
 },
 {
