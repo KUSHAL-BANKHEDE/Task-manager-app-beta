@@ -1,22 +1,25 @@
 const jwt = require('jsonwebtoken');
 
 const authMiddleware = (req, res, next) => {
-    // Get token from header
-    let token = req.header('Authorization');
-    
+    // Get token from Authorization header
+    const authHeader = req.header('Authorization');
+
+    if (!authHeader) {
+        return res.status(401).json({ message: 'Authorization denied, no token' });
+    }
+
+    const token = authHeader.split(" ")[1]; // Get the actual token
     if (!token) {
-        return res.status(401).json({ message: 'No token, authorization denied' });
+        return res.status(401).json({ message: 'Authorization denied, invalid token format' });
     }
 
     try {
         // Verify token
-        token = req.headers.authorization.split(" ")[1];
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        req.user = decoded.id;  // Attach the user's ID to req.user
-        console.log("middileware is working fine");
+        req.user = decoded.id;  // Attach user's ID to req.user for later use
         next();
     } catch (err) {
-        res.status(401).json({ message: 'Invalid token' });
+        return res.status(401).json({ message: 'Invalid or expired token' });
     }
 };
 
