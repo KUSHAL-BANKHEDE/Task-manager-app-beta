@@ -11,6 +11,7 @@ exports.register = async (req, res) => {
         if (user) {
             return res.status(400).json({ message: 'User already exists' });
         }
+        
 
         user = new User({ email,firstName,
             lastName, password });
@@ -41,13 +42,14 @@ exports.login = async (req, res) => {
     const { email, password } = req.body;
 
     try {
-        // Fetch user and password in one query
+        // Fetch user with password
         const user = await User.findOne({ email }).select('password email _id').exec();
+        
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
         }
 
-        // Compare the password directly
+        // Compare passwords
         const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) {
             return res.status(401).json({ message: 'Invalid credentials' });
@@ -68,6 +70,7 @@ exports.login = async (req, res) => {
         return res.status(500).json({ message: 'Server error' });
     }
 };
+
 
 exports.allUsers = async(req, res)=>{
     try {
