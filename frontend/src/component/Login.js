@@ -38,23 +38,23 @@ export default function Login() {
     }
   };
 
-  function nave(url) {
-    window.location.href = url;
-  }
+  // function nave(url) {
+  //   window.location.href = url;
+  // }
 
-  async function auth() {
-    try {
-      const response = await fetch(`${Domain}/request`, {
-        method: "POST",
-      });
+  // async function auth() {
+  //   try {
+  //     const response = await fetch(`${Domain}/request`, {
+  //       method: "POST",
+  //     });
 
-      const data = await response.json();
-      console.log(data);
-      nave(data.url);
-    } catch (err) {
-      console.error("Error during Google auth", err);
-    }
-  }
+  //     const data = await response.json();
+  //     console.log(data);
+  //     nave(data.url);
+  //   } catch (err) {
+  //     console.error("Error during Google auth", err);
+  //   }
+  // }
 
   return (
     <div className="flex items-center justify-center h-screen">
@@ -87,12 +87,12 @@ export default function Login() {
             Signup
           </a>
         </p>
-        <button
+        {/* <button
           className="bg-red-500 w-full py-2 text-white mt-4"
           onClick={() => auth()}
         >
           Login with Google
-        </button>
+        </button> */}
       </div>
     </div>
   );
